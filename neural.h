@@ -4,8 +4,7 @@
 
 #include "tools.h"
 
-static std::random_device rd;
-static std::default_random_engine gen{rd()};
+static std::default_random_engine gen{std::random_device{}()};
 
 template <class DataType, std::size_t... EachLayerSize>
 class Neural {
