@@ -4,8 +4,6 @@
 
 #include "tools.h"
 
-static std::default_random_engine gen{std::random_device{}()};
-
 template <class DataType, std::size_t... EachLayerSize>
 class Neural {
  public:
@@ -36,6 +34,7 @@ class Neural {
         learning_rate{learning_rate},
         activate_func{activate_func},
         activate_func_d{activate_func_d} {
+    std::default_random_engine gen{std::random_device{}()};
     for (auto &weight : weights) {
       std::generate_n(std::begin(weight), weight.size(),
                       [&]() { return urd(gen); });
