@@ -42,7 +42,6 @@ struct range {
   constexpr It begin() const { return m_begin; }
   constexpr It end() const { return m_end; }
 };
-
 template <class It>
 range(It, It) -> range<It>;
 
@@ -189,9 +188,16 @@ struct is_range {
   static constexpr bool value = decltype(test<T>(nullptr))::value;
 };
 
+template <class, template <class...> class>
+struct is_instance : std::false_type {};
+template <class... T, template <class...> class U>
+struct is_instance<U<T...>, U> : std::true_type {};
+
 template <class Range>
 constexpr auto operator<<(std::ostream& os, Range const& r)
-    -> std::enable_if_t<is_range<Range>::value, std::ostream&> {
+    -> std::enable_if_t<is_range<Range>::value &&
+                            !is_instance<Range, std::basic_string>::value,
+                        std::ostream&> {
   os << '{';
   for (auto [i, element] : enumerate(r))
     os << element << (i + 1 == r.size() ? "" : ", ");
