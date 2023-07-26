@@ -1,5 +1,6 @@
 #pragma once
 
+#include <execution>
 #include <random>
 
 #include "tools.h"
@@ -8,20 +9,17 @@ template <class DataType, std::size_t... EachLayerSize>
 class Neural {
  public:
   static_assert(sizeof...(EachLayerSize) > 1);
-  static constexpr std::size_t layer_num = sizeof...(EachLayerSize);
-  static constexpr std::size_t each_layer_size[layer_num] = {EachLayerSize...};
+  static constexpr std::array each_layer_size = {EachLayerSize...};
   static std::uniform_real_distribution<DataType> urd;
 
- public:
-  std::array<std::valarray<DataType>, layer_num> layers;
-  std::array<std::valarray<DataType>, layer_num> grads;
-  std::array<std::valarray<DataType>, layer_num - 1> weights;
+  std::array<std::valarray<DataType>, each_layer_size.size()> layers;
+  std::array<std::valarray<DataType>, each_layer_size.size()> grads;
+  std::array<std::valarray<DataType>, each_layer_size.size() - 1> weights;
 
   DataType learning_rate;
   DataType (*activate_func)(DataType);
   DataType (*activate_func_d)(DataType);
 
- public:
   Neural(DataType learning_rate, DataType activate_func(DataType),
          DataType activate_func_d(DataType))
       : layers{std::valarray<DataType>(EachLayerSize)...},
@@ -36,8 +34,8 @@ class Neural {
         activate_func_d{activate_func_d} {
     std::default_random_engine gen{std::random_device{}()};
     for (auto &weight : weights) {
-      std::generate_n(std::begin(weight), weight.size(),
-                      [&]() { return urd(gen); });
+      std::generate_n(std::execution::par, std::begin(weight), weight.size(),
+                      [&]() { return 0.01f * urd(gen); });
     }
   }
 
@@ -57,8 +55,8 @@ class Neural {
 
   void backward(std::valarray<DataType> ideal_output) {
     std::fill(grads.begin(), grads.end(), DataType{});
-    grads[layer_num - 1] = 2.0 / each_layer_size[layer_num - 1] *
-                           (layers[layer_num - 1] - ideal_output);
+    grads.back() =
+        2.0 / each_layer_size.back() * (layers.back() - ideal_output);
 #pragma unroll
     for (auto [layer_left, layer_right, grad_left, grad_right, weight] :
          zip(layers | reverse | drop<1>(), layers | reverse,
@@ -92,9 +90,8 @@ class Neural {
         backward(ideal_output);
       }
       if ((i + 1) % gap == 0)
-        std::cout << "loss: "
-                  << std::sqrt(std::pow(grads[layer_num - 1], 2).sum()) << ' '
-                  << "weights: " << weights << '\n';
+        std::cout << "loss: " << std::sqrt(std::pow(grads.back(), 2).sum())
+                  << ' ' << "weights: " << weights << '\n';
     }
   }
 };
