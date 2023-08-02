@@ -5,22 +5,22 @@
 #include <tuple>
 #include <valarray>
 
-#pragma region multi_array
-template <class DataType, int... Is>
-struct multi_array;
+#pragma region multi_tuple
+template <std::size_t... Is>
+struct multi_tuple;
 
-template <class DataType, int First, int Second, int... Rest>
-struct multi_array<DataType, First, Second, Rest...> {
+template <std::size_t First, std::size_t Second, std::size_t... Rest>
+struct multi_tuple<First, Second, Rest...> {
   using type = decltype(std::tuple_cat(
-      std::tuple<std::array<DataType, First * Second>>(),
-      typename multi_array<DataType, Second, Rest...>::type()));
+      std::tuple<std::integral_constant<std::size_t, First * Second>>(),
+      typename multi_tuple<Second, Rest...>::type()));
 };
 
-template <class DataType, int Last>
-struct multi_array<DataType, Last> {
+template <std::size_t Last>
+struct multi_tuple<Last> {
   using type = std::tuple<>;
 };
-#pragma endregion multi_array
+#pragma endregion multi_tuple
 
 #pragma region tuple
 template <class Tuple1, class Tuple2, std::size_t... Is>

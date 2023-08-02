@@ -1,6 +1,5 @@
 #pragma once
 
-#include <execution>
 #include <random>
 
 #include "tools.h"
@@ -8,9 +7,9 @@
 template <class DataType, std::size_t... EachLayerSize>
 class Neural {
  public:
-  static_assert(sizeof...(EachLayerSize) > 1);
-  static constexpr std::array each_layer_size = {EachLayerSize...};
-  static std::uniform_real_distribution<DataType> urd;
+  static_assert(sizeof...(EachLayerSize) > 1, "2 layers at least");
+  static constexpr std::array<std::size_t, sizeof...(EachLayerSize)>
+      each_layer_size = {EachLayerSize...};
 
   std::array<std::valarray<DataType>, each_layer_size.size()> layers;
   std::array<std::valarray<DataType>, each_layer_size.size()> grads;
@@ -25,16 +24,17 @@ class Neural {
       : layers{std::valarray<DataType>(EachLayerSize)...},
         grads{std::valarray<DataType>(EachLayerSize)...},
         weights{std::apply(
-            [](auto &&...weight) {
-              return std::array{std::valarray<DataType>(weight.size())...};
+            [](auto &&...weight_size) {
+              return std::array{std::valarray<DataType>(weight_size)...};
             },
-            typename multi_array<DataType, EachLayerSize...>::type())},
+            typename multi_tuple<EachLayerSize...>::type())},
         learning_rate{learning_rate},
         activate_func{activate_func},
         activate_func_d{activate_func_d} {
     std::default_random_engine gen{std::random_device{}()};
+    std::uniform_real_distribution<DataType> urd{DataType(-1), DataType(1)};
     for (auto &weight : weights) {
-      std::generate_n(std::execution::par, std::begin(weight), weight.size(),
+      std::generate_n(std::begin(weight), weight.size(),
                       [&]() { return 0.01f * urd(gen); });
     }
   }
@@ -42,7 +42,9 @@ class Neural {
   void forward(std::valarray<DataType> input_data) {
     std::fill(layers.begin(), layers.end(), DataType{});
     layers[0] = input_data;
+#ifndef _MSC_VER
 #pragma unroll
+#endif
     for (auto [layer_left, layer_right, weight] :
          zip(layers, layers | drop<1>(), weights)) {
       for (auto i : iota(layer_right.size())) {
@@ -55,9 +57,10 @@ class Neural {
 
   void backward(std::valarray<DataType> ideal_output) {
     std::fill(grads.begin(), grads.end(), DataType{});
-    grads.back() =
-        2.0 / each_layer_size.back() * (layers.back() - ideal_output);
+    grads.back() = layers.back() - ideal_output;
+#ifndef _MSC_VER
 #pragma unroll
+#endif
     for (auto [layer_left, layer_right, grad_left, grad_right, weight] :
          zip(layers | reverse | drop<1>(), layers | reverse,
              grads | reverse | drop<1>(), grads | reverse, weights | reverse)) {
@@ -90,12 +93,8 @@ class Neural {
         backward(ideal_output);
       }
       if ((i + 1) % gap == 0)
-        std::cout << "loss: " << std::sqrt(std::pow(grads.back(), 2).sum())
+        std::clog << "loss: " << std::sqrt(std::pow(grads.back(), 2).sum())
                   << ' ' << "weights: " << weights << '\n';
     }
   }
 };
-
-template <class DataType, std::size_t... EachLayerSize>
-std::uniform_real_distribution<DataType>
-    Neural<DataType, EachLayerSize...>::urd{-1, 1};
