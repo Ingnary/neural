@@ -1,6 +1,8 @@
 #pragma once
 
+#include <array>
 #include <random>
+#include <valarray>
 
 #include "tools.h"
 
