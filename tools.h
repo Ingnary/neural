@@ -1,9 +1,7 @@
 #pragma once
 
-#include <array>
 #include <iostream>
 #include <tuple>
-#include <valarray>
 
 #pragma region tuple
 template <std::size_t... Is>
