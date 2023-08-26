@@ -5,7 +5,7 @@
 #include <tuple>
 #include <valarray>
 
-#pragma region multi_tuple
+#pragma region tuple
 template <std::size_t... Is>
 struct multi_tuple;
 
@@ -20,15 +20,20 @@ template <std::size_t Last>
 struct multi_tuple<Last> {
   using type = std::tuple<>;
 };
-#pragma endregion multi_tuple
 
-#pragma region tuple
 template <class Tuple1, class Tuple2, std::size_t... Is>
 constexpr bool tuple_compare(Tuple1 const& tuple1, Tuple2 const& tuple2,
                              std::index_sequence<Is...>) {
   return ((std::get<Is>(tuple1) != std::get<Is>(tuple2)) && ...);
 }
 #pragma endregion tuple
+
+#pragma region instance
+template <class, template <class...> class>
+struct is_instance : std::false_type {};
+template <class... T, template <class...> class U>
+struct is_instance<U<T...>, U> : std::true_type {};
+#pragma endregion instance
 
 #pragma region range
 template <class It>
@@ -187,11 +192,6 @@ struct is_range {
 
   static constexpr bool value = decltype(test<T>(nullptr))::value;
 };
-
-template <class, template <class...> class>
-struct is_instance : std::false_type {};
-template <class... T, template <class...> class U>
-struct is_instance<U<T...>, U> : std::true_type {};
 
 template <class Range>
 constexpr auto operator<<(std::ostream& os, Range const& r)
